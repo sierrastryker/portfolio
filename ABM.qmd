@@ -1,0 +1,149 @@
+---
+title: "Agent Based Model"
+format: pdf
+author: Sierra Stryker
+---
+
+# Introduction
+
+Scullen et al. (2005) tests the Forced Distribution Rating System (FDRS) which is generally the idea of terminating a certain percentage of the workforce on an annual basis. 
+
+---
+
+# Load Necessary Libraries and Set Seed
+
+```{r}
+library(tidyverse)
+set.seed(12345)
+```
+
+These libraries will allow me to use functions outside of base R. 
+
+Using set.seed will keep results consistent across users.
+
+# Design the Simulation
+
+```{r}
+# set time to zero to begin anew
+t <- 0
+
+# This will create an easy-to-read output of results over time
+org_outputs <- as.data.frame(matrix(ncol = 2, nrow = 1))
+
+names(org_outputs) <- c("Iteration", "Mean_Potential")
+
+# Create FDRS Function
+fdrs <- function(validity, selection_ratio, turnover, fire_percent, reliability, t)
+  {
+  # Generate 100 current employees with randomized scores for performance potential
+  org <- data.frame(potential_score = rnorm(n = 100, mean = 0, sd = 1)) %>%
+    # Calculate applicant scores based on the validity of the selection system and the performance potential of applicants
+    mutate(applicant_score = validity * potential_score + sqrt(1-validity)^2*rnorm(1))
+  # This for loop will iterate 10 times to simulate 10 years of the FDRS system
+  for(t in 0:9){
+    # Iterate time 1 year
+    t = t+1
+    # Randomly sample employees to remove from the organization, representing voluntary turnover
+    org <- org %>%
+      slice_sample(n = (1-turnover)*nrow(org))
+    # Simulate a randomized applicant pool of potential hires to replace voluntary turnover personnel
+    replace_turnover <- data.frame(potential_score = rnorm(n = 100-(100*(1-turnover))))
+    # Calculate applicant scores for the applicant pool
+    replace_scored <- replace_turnover %>%
+      mutate(applicant_score = validity * potential_score + sqrt(1-validity)^2*rnorm(1))
+    # Generate performance ratings for all employees and remove the lowest scorers
+    org <- bind_rows(org, replace_scored) %>%
+      mutate(rating = potential_score * sqrt(reliability) + rnorm(1)*sqrt(1-reliability)) %>%
+      arrange(desc(rating)) %>%
+      slice_head(n = (1-fire_percent)*nrow(org))
+    # Specify how many applications to collect for the open positions based on the desired selection ratio
+    job_applicants <- (1/selection_ratio)*(100-nrow(org))
+    # Generate an applicant pool with potential and applicant scores as well as performance ratings, then hire the top applicants
+    new_applicant <- data.frame(potential_score = rnorm(n = job_applicants, mean = 0, sd = 1)) %>%
+      mutate(applicant_score = validity * potential_score + sqrt(1-validity)^2*rnorm(1)) %>%
+      mutate(rating = potential_score * sqrt(reliability) + rnorm(1)*sqrt(1-reliability)) %>%
+      arrange(desc(applicant_score)) %>%
+      slice_head(n = 100 - nrow(org))
+    # Add new hires to the organization
+    org <- bind_rows(org, new_applicant) %>%
+      select(potential_score, applicant_score)
+    # Print the outputs into a table
+    print(mean(org$potential_score))
+    org_outputs[t,"Iteration"] <- t
+    org_outputs[t,"Mean_Potential"] <- mean(org$potential_score)
+    }
+  org_outputs
+}
+```
+
+# Run the Simulation
+
+The above function can be fed different values for validity of the selection system, the desired selection ratio, the amount of expected voluntary turnover, the percentage of employees to fire per annum, and the reliability of the performance evaluations. 
+
+By specifying these values, we can test different combinations and see how the results vary between potential systems. 
+
+The first example simulation will have a greater percentage of terminated employees, but greater reliability of performance scores compared to the second example simulation. 
+
+```{r}
+# Simulation 1
+
+validity <- .3
+selection_ratio <- .33
+turnover <- .10
+fire_percent <- 0.10
+reliability <- 0.70
+
+simulation_1 <- fdrs(validity, selection_ratio, turnover, fire_percent, reliability, t)
+```
+
+The second example simulation will terminate a lower percentage of employees, but utilize a lower selection ratio and improved selection system to maximize the potential of new employees.
+
+```{r}
+# Simulation 2
+
+validity <- .5
+selection_ratio <- 0.1
+turnover <- .20
+fire_percent <- 0.05
+reliability <- 0.5
+
+simulation_2 <- fdrs(validity, selection_ratio, turnover, fire_percent, reliability, t)
+```
+
+# Comparing Results
+
+## Merge Datasets
+
+```{r}
+simulation_1 <- simulation_1 %>%
+  mutate(Simulation_Version = "1")
+
+simulation_2 <- simulation_2 %>%
+  mutate(Simulation_Version = "2")
+
+results <- rbind(simulation_1, simulation_2)
+```
+
+
+## Vizualization of Results
+
+```{r}
+ggplot(data=results, aes(x=Iteration, y=Mean_Potential, group=Simulation_Version)) +
+  geom_line(aes(color=Simulation_Version)) +
+  geom_point(aes(color=Simulation_Version)) +
+  labs(title="Average Employee Potential Over Time", x="Years since FDRS Implementation", y="Average Potential Score", color="Simulation Version") +
+  ylim(0.5, 2) +
+  theme_minimal() +
+  theme(legend.position="bottom")
+```
+
+## Conclusion
+
+This graph shows a clear advantage to the strategy used in Simulation 2. It is recommended that the organization implement an FDRS system with a 5% cutoff paired with a selection system with a greater validity and a more stringent selection ratio to maximize the growth of employee potential. 
+
+---
+
+Reference:
+
+Scullen, S. E., Bergey, P. K., & Aiman‐Smith, L. (2005). Forced distribution rating systems and the improvement of workforce potential: A baseline simulation. _Personnel Psychology_, _58_(1), 1-32.
+
