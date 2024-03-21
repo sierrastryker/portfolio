@@ -21,7 +21,7 @@ I will use 3 libraries in this R file to give myself access to more functions:
 - ggplot2 will be used for generating graphs
 - scales is an addendum to ggplot2 that will be used for additional graphing capabilities
 
-```{r warning=F}
+```{r warning=F, message=F}
 library(tidyverse)
 library(ggplot2)
 library(scales)
@@ -162,7 +162,7 @@ Another less common range for applicants was an award amount between $30,000-60,
 
 ```{r warning=F}
 ggplot(data=dds, aes(x=expenditures)) +
-  geom_histogram(bins=30) +
+  geom_histogram(bins=30, fill="goldenrod") +
   labs(title="Total Expenditures", x="Total Amount Spent", y="Number of Recipients") +
   theme_minimal()
 ```
@@ -190,11 +190,36 @@ From this box and whisker plot, it can be seen that female recipients had a slig
 
 This indicates that female and male award amounts were fairly equal, but the average female recipient was awarded less in expenditures than the average male recipient. However, there is also some evidence that the highest rewards tended to go to women compared to men. 
 
+## Effects of Age
+
+In this section, a scatter plot will be used in order to examine how expenditures change based on the age of the recipient.
+
+### Age Scatterplot
+
+This scatterplot represents the amount of the expenditure on the horizontal axis and the age of the recipient on the vertical axis. A line of best fit was added to show the direction and strength of the expenditure by age relationship. 
+
+```{r warning=F, message=F}
+# Scatterplot of Expenditures by Age
+ggplot(data=dds, aes(x=expenditures, y=age)) +
+  geom_point(color="navy") +
+  geom_smooth(method=lm, se=FALSE) +
+  labs(title="Expenditures by Age", x="Expenditures Amount", y="Age of Recipient") +
+  theme_classic()
+```
+
+### Key Takeaways for Age:
+
+From this graph, it is clear that expenditure amounts increase as the recipient ages. 
+
+There also seems to be a clear limit for recipients over the of 25 versus the those under 25. It seems that younger recipients have an expenditure maximum around $20,000 which also acts as a minimum for recipients over 25. 
+
+Another note is that all recipients of greater than $60,000 are also over the age of 50.
+
 ## Effects of Ethnicity
 
 This dataset highlights ethnicity-based discrimination in state-awarded developmental disability support. Therefore, understanding the differences between ethnic groups is imperative in visualizing this dataset. 
 
-### Simplified Ethnicity
+### Simplified Ethnicity Histogram
 
 A histogram will be used to examine the effects of ethnicity on expenditures. This is ideal for showing which ethnic groups were more likely to be awarded certain amounts. 
 
@@ -203,20 +228,38 @@ To improve readability, data were slightly condensed (using bins) and a maximum 
 ```{r warning=F}
 # Histogram of Expenditures by Ethnicity
 ggplot(data=dds, aes(x=expenditures, fill=ethnicity_simple)) +
-  geom_histogram(bins = 15, position = "dodge") +
+  geom_histogram(bins = 25) +
   labs(title="Expenditures by Ethnicity", x="Expenditures Amount", y="Number of Recipients", fill="Key") +
   xlim(0, 70000) +
   theme_minimal() +
   theme(legend.position="bottom")
 ```
 
+### Simplified Ethnicity Box and Whisker
+
+In order to directly compare between ethnicities, a box and whisker plot can be used. Note that the dots represent outliers in the data and that each "box" represents a total of 50% of recipients for that ethnicity. 
+
+```{r}
+# Box and Whisker Plot of Expenditures by Gender
+ggplot(data=dds, aes(x=expenditures, color=ethnicity_simple)) +
+  geom_boxplot() +
+  labs(title="Expenditures by Ethnicity", x="Amount Spent in Dollars", color="Key") +
+  theme_classic() +
+  theme(axis.text.y=element_blank()) +
+  scale_color_brewer(palette="Dark2")
+```
+
 ### Key Takeaways for Simplified Ethnicity:
 
-Across all award amounts, White recipients were the largest group. 
+The histogram showed that across all award amounts, White recipients were the largest group in terms of number of recipients. 
 
 All ethnicities were most likely to receive amounts under $20,000.
 
-However, there were many more White recipients awarded over $30,000 compared to all other ethnicities. To determine if this is due to the number of White recipients or a true statistical difference, an ANOVA should be performed. 
+However, there were many more White recipients awarded over $30,000 compared to all other ethnicities.
+
+From the box and whisker plot, it is clear that the median award amounts for White recipients was much higher than all other ethnicities. Hispanic and Other (which included American Indian, Multi-Race, Native Hawaiian, and other) recipients received the lowest median amounts.
+
+To determine if these differences statistically significant, an ANOVA should be performed. 
 
 ### Dichotomized Ethnicity
 
